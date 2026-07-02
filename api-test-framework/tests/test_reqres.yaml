@@ -1,0 +1,55 @@
+tests:
+  - name: Get single user
+    base_url: reqres
+    method: GET
+    endpoint: /api/users/2
+    expected_status: 200
+    assertions:
+      - response.data.id == 2
+      - response.data.email is not None
+      - "'first_name' in response.data"
+
+  - name: Get user not found
+    base_url: reqres
+    method: GET
+    endpoint: /api/users/23
+    expected_status: 404
+    assertions:
+      - response == {}
+
+  - name: Create user
+    base_url: reqres
+    method: POST
+    endpoint: /api/users
+    payload:
+      name: morpheus
+      job: leader
+    expected_status: 201
+    assertions:
+      - response.name == "morpheus"
+      - response.job == "leader"
+      - response.id is not None
+
+  - name: Update user
+    base_url: reqres
+    method: PUT
+    endpoint: /api/users/2
+    payload:
+      name: morpheus
+      job: zion resident
+    expected_status: 200
+    assertions:
+      - response.job == "zion resident"
+      - response.updatedAt is not None
+
+  - name: Login successful
+    base_url: reqres
+    method: POST
+    endpoint: /api/login
+    payload:
+      email: eve.holt@reqres.in
+      password: cityslicka
+    expected_status: 200
+    assertions:
+      - response.token is not None
+      - len(response.token) > 0
