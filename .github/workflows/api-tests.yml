@@ -19,6 +19,10 @@ on:
 jobs:
   api-tests:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      checks: write
+      pull-requests: write
 
     steps:
       - name: Checkout repository
