@@ -1,6 +1,5 @@
 tests:
   - name: Get single user
-    base_url: reqres
     method: GET
     endpoint: /api/users/2
     expected_status: 200
@@ -10,7 +9,6 @@ tests:
       - "'first_name' in response.data"
 
   - name: Get user not found
-    base_url: reqres
     method: GET
     endpoint: /api/users/23
     expected_status: 404
@@ -18,7 +16,6 @@ tests:
       - response == {}
 
   - name: Create user
-    base_url: reqres
     method: POST
     endpoint: /api/users
     payload:
@@ -31,7 +28,6 @@ tests:
       - response.id is not None
 
   - name: Update user
-    base_url: reqres
     method: PUT
     endpoint: /api/users/2
     payload:
@@ -43,7 +39,6 @@ tests:
       - response.updatedAt is not None
 
   - name: Login successful
-    base_url: reqres
     method: POST
     endpoint: /api/login
     payload:

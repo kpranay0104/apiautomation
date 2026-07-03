@@ -1,28 +1,20 @@
-# API Test Automation Framework
+# API Test Automation Framework — Reqres
 
-A lightweight, reusable Python framework for testing REST APIs. Test cases are
-authored as YAML data (no Python required to add coverage), executed with
-`pytest` + `requests`, and wired into GitHub Actions for CI on every push/PR.
+A lightweight, reusable Python framework for testing REST APIs. Test cases
+are authored as YAML data (no Python required to add coverage), executed
+with `pytest` + `requests`, and wired into GitHub Actions for CI on every
+push/PR.
 
-Demonstrated against three public APIs:
-
-- [Reqres](https://reqres.in/) — users, login, create/update
-- [JSONPlaceholder](https://jsonplaceholder.typicode.com/) — posts CRUD
-- [OpenWeatherMap](https://openweathermap.org/api) — current weather lookup
+Demonstrated against [Reqres](https://reqres.in/) — a free mock user/auth API.
 
 ## Repository layout
 
 ```
-tests/       API test cases (YAML) + the generic pytest executor
-framework/   Reusable client, loader, logger, assertion engine
-ci/          Copy of the CI pipeline definition (see note below)
-docs/        Test-case format & architecture docs
+tests/                    API test cases (YAML) + the generic pytest executor
+framework/                Reusable client, loader, logger, assertion engine
+docs/                     Test-case format & architecture docs
+.github/workflows/        CI pipeline (GitHub only reads workflows from this path)
 ```
-
-> **Note on `ci/`:** GitHub Actions only executes workflows placed under
-> `.github/workflows/`, so the pipeline that actually runs lives there.
-> `ci/github-actions.yml` is an identical copy kept for easy review alongside
-> the other requirement folders — keep both in sync if you edit one.
 
 ## Local setup
 
@@ -33,18 +25,20 @@ python -m venv .venv && source .venv/bin/activate   # optional but recommended
 pip install -r requirements.txt
 ```
 
-### API key for OpenWeatherMap
+### API key (required)
 
-The weather tests need a free API key from https://openweathermap.org/api.
+Reqres now requires an `x-api-key` header on every request. Get a free key
+at **https://reqres.in/signup**, then:
 
 ```bash
 cp .env.example .env
-# edit .env and set OPENWEATHER_API_KEY=...
-export $(grep -v '^#' .env | xargs)   # or use your shell's preferred method
+# edit .env and set REQRES_API_KEY=your_key_here
 ```
 
-If the key isn't set, the two weather test cases are **skipped** (not
-failed) with a clear message — every other test still runs.
+`conftest.py` loads `.env` automatically — no manual `export` needed. If no
+key is found (in `.env`, the environment, or via `--api-key`), the test run
+stops immediately with a clear message rather than failing 5 separate tests
+with confusing 401s.
 
 ## Running the tests
 
@@ -52,30 +46,51 @@ failed) with a clear message — every other test still runs.
 pytest
 ```
 
-This runs every test case in `tests/*.yaml` and produces:
+By default, tests run against `https://reqres.in`. This produces:
 
 - Console output (`-v`, one line per test case)
 - `reports/report.html` — self-contained HTML report
 - `reports/junit.xml` — JUnit XML for CI integration
 - `reports/test_run.log` — full request/response log for debugging
 
-Run a single API's suite, or a single case, with normal pytest filters:
+Run a single test case with normal pytest filters:
 
 ```bash
-pytest -k "reqres"
 pytest -k "Login successful"
 ```
 
+## Configuring the base URL and API key
+
+You don't have to edit any code to point the suite at a different host or
+key. Both follow the same priority order:
+
+**1. Command-line flag (highest priority)**
+```bash
+pytest --base-url https://reqres.in --api-key your_key_here
+```
+
+**2. `.env` file**
+```bash
+cp .env.example .env
+# edit .env: set REQRES_API_KEY=... and optionally BASE_URL=...
+pytest
+```
+`conftest.py` loads `.env` automatically via `python-dotenv`.
+
+**3. Built-in default** — only `base_url` has one (`https://reqres.in`,
+defined in `conftest.py::DEFAULT_BASE_URL`). There is no default API key;
+if none is found, the run stops immediately with instructions instead of
+producing five confusing 401 failures.
+
 ## Adding a test case
 
-No Python needed — add an entry to a file under `tests/`. See
+No Python needed — add an entry to `tests/test_reqres.yaml`. See
 [`docs/writing-test-cases.md`](docs/writing-test-cases.md) for the full
 schema and assertion syntax. Example:
 
 ```yaml
 tests:
   - name: Get user details
-    base_url: reqres
     method: GET
     endpoint: /api/users/2
     expected_status: 200
@@ -91,20 +106,18 @@ retry logic, logging, and the safe assertion evaluator.
 
 ## CI/CD
 
-`.github/workflows/api-tests.yml` runs on every push/PR to `main` and on
-manual dispatch:
+`.github/workflows/api-tests.yml` runs on every push/PR to `main`, and can
+also be triggered manually with `base_url` and `api_key` overrides
+(**Actions → API Tests → Run workflow**). Each run:
 
 1. Checks out the repo
 2. Installs dependencies from `requirements.txt`
-3. Runs `pytest` (reads `OPENWEATHER_API_KEY` from a repo secret)
+3. Runs `pytest`
 4. Uploads `reports/` as a build artifact
-5. Publishes a JUnit test summary on the PR/run page
+5. Publishes a JUnit test summary on the run page
 
-To enable the weather tests in CI, add a repository secret named
-`OPENWEATHER_API_KEY` under **Settings → Secrets and variables → Actions**.
-
-## Extending to another API
-
-1. Add the new base URL to `BASE_URLS` in `tests/test_api.py`.
-2. Create `tests/test_<name>.yaml`.
-3. Push — CI picks it up automatically.
+`api_key` is a manual-dispatch input, not a repo secret — type it into the
+"Run workflow" form when triggering manually. Note this means it will be
+visible in plain text in that run's log; for anything beyond demo/personal
+use, switching it to a repo secret (**Settings → Secrets and variables →
+Actions**) is the safer long-term option.

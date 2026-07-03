@@ -6,6 +6,15 @@ on:
   pull_request:
     branches: [ main ]
   workflow_dispatch:
+    inputs:
+      base_url:
+        description: "Override the API base URL for this run"
+        required: false
+        default: ""
+      api_key:
+        description: "Reqres x-api-key for this run"
+        required: false
+        default: ""
 
 jobs:
   api-tests:
@@ -28,7 +37,8 @@ jobs:
 
       - name: Run API test suite
         env:
-          OPENWEATHER_API_KEY: ${{ secrets.OPENWEATHER_API_KEY }}
+          BASE_URL: ${{ github.event.inputs.base_url }}
+          REQRES_API_KEY: ${{ github.event.inputs.api_key }}
         run: pytest
 
       - name: Upload test report
